@@ -1,10 +1,16 @@
-import { ParameterizedContext, Next, Middleware } from "koa";
-import { ROUTES } from "../routes/routes";
+import { Middleware, Next, ParameterizedContext } from "koa";
 import { decodeToken, JwtPayload, validateToken } from "../libs/jwt";
-import { USERS } from "../user/user";
+import { ROUTES } from "../routes/routes";
+import { User, USERS } from "../user/user";
 
 export function customAuth() {
   return async function (ctx: ParameterizedContext, next: Next) {
+    if (ctx.path === "/graphql" && ctx.method === "POST") {
+      //const { operationName } = ctx.request.body;
+
+      return next();
+    }
+
     const routeCalled = ROUTES.get(ctx.path);
     if (!routeCalled) {
       ctx.status = 404;
@@ -63,3 +69,13 @@ export function customAuth() {
 }
 
 export const authMiddleware: Middleware = customAuth();
+
+export async function authenticateUser(request: Request): Promise<User | null> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader) return null;
+
+  const token = authHeader.replace("Bearer ", "");
+  const decodedToken: JwtPayload = decodeToken(token) as JwtPayload;
+  const user = USERS.get(decodedToken.email);
+  return user || null;
+}
