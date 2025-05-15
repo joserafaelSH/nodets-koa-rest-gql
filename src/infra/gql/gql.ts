@@ -1,12 +1,10 @@
 import { createYoga } from "graphql-yoga";
 import Koa from "koa";
 import { koaBody } from "koa-body";
-import { authMiddleware } from "../auth/auth";
-import { logger } from "../logger/logger";
-import { setRoutes } from "../routes/routes";
-import { setUsers } from "../user/user";
 import { schema } from "./schema/schema";
 import { createContext } from "./context";
+import { logger } from "../logger/logger";
+import { setUsers } from "../../domain/repository/user";
 
 export async function createGqlServer() {
   const app = new Koa();
@@ -19,6 +17,7 @@ export async function createGqlServer() {
     },
     schema,
     context: createContext,
+    graphqlEndpoint: "/api/graphql",
   });
 
   app.use(koaBody());
@@ -37,9 +36,6 @@ export async function createGqlServer() {
     const ms = Date.now() - start;
     ctx.set("X-Response-Time", `${ms}ms`);
   });
-
-  // auth middleware
-  app.use(authMiddleware);
 
   app.use(async (ctx: Koa.Context) => {
     // Second parameter adds Koa's context into GraphQL Context
@@ -66,10 +62,6 @@ export async function createGqlServer() {
     logger.error("server error", err, ctx);
   });
 
-  const port = process.env.PORT || 3000;
-
-  logger.info(`Starting app: ${process.env.NODE_ENV} mode on ${port} port`);
   await setUsers();
-  setRoutes();
   return app;
 }

@@ -1,6 +1,7 @@
 import { createSchema } from "graphql-yoga";
-import { login, register } from "../../user/user";
+
 import { GraphQLContext } from "../context";
+import { login, register } from "../../../domain/services/user";
 
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
@@ -58,17 +59,12 @@ export const schema = createSchema({
       register: async (
         parent: unknown,
         args: { email: string; pass: string },
-        context,
       ) => {
         const { email, pass } = { ...args };
         const user = await register({ email, pass });
         return user;
       },
-      login: async (
-        parent: unknown,
-        args: { email: string; pass: string },
-        context,
-      ) => {
+      login: async (parent: unknown, args: { email: string; pass: string }) => {
         const { email, pass } = { ...args };
         const token = await login({ email, pass });
         return {

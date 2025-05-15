@@ -1,5 +1,5 @@
 import { YogaInitialContext } from "graphql-yoga";
-import { User } from "../user/user";
+import { User } from "../../domain/entities/user";
 import { authenticateUser } from "../auth/auth";
 
 export type GraphQLContext = {

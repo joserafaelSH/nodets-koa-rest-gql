@@ -1,10 +1,10 @@
 import router from "@koa/router";
 import Koa from "koa";
 import { koaBody } from "koa-body";
-import { logger } from "../logger/logger";
+import { setUsers } from "../../domain/repository/user";
+import { login, register } from "../../domain/services/user";
 import { authMiddleware } from "../auth/auth";
-import { login, register, setUsers } from "../user/user";
-import { setRoutes } from "../routes/routes";
+import { logger } from "../logger/logger";
 
 export async function createHttpServer() {
   const appRouter = new router();
@@ -27,9 +27,6 @@ export async function createHttpServer() {
     ctx.set("X-Response-Time", `${ms}ms`);
   });
 
-  // auth middleware
-  app.use(authMiddleware);
-
   appRouter.get("/api/ping", (ctx) => {
     ctx.body = { message: "pong" };
   });
@@ -46,13 +43,21 @@ export async function createHttpServer() {
     ctx.body = { token };
   });
 
-  appRouter.post("/api/private", async (ctx: Koa.Context) => {
-    ctx.body = { messge: "private" };
-  });
+  appRouter.get(
+    "/api/private",
+    authMiddleware(["ADMIN", "USER"]),
+    async (ctx: Koa.Context) => {
+      ctx.body = { messge: "private" };
+    },
+  );
 
-  appRouter.get("/api/private/admin", async (ctx: Koa.Context) => {
-    ctx.body = { messge: "private admin" };
-  });
+  appRouter.get(
+    "/api/private/admin",
+    authMiddleware(["ADMIN"]),
+    async (ctx: Koa.Context) => {
+      ctx.body = { messge: "private admin" };
+    },
+  );
 
   app.use(appRouter.routes());
 
@@ -60,10 +65,6 @@ export async function createHttpServer() {
     logger.error("server error", err, ctx);
   });
 
-  const port = process.env.PORT || 3000;
-
-  logger.info(`Starting app: ${process.env.NODE_ENV} mode on ${port} port`);
   await setUsers();
-  setRoutes();
   return app;
 }

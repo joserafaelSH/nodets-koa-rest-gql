@@ -1,27 +1,10 @@
 import { Middleware, Next, ParameterizedContext } from "koa";
 import { decodeToken, JwtPayload, validateToken } from "../libs/jwt";
-import { ROUTES } from "../routes/routes";
-import { User, USERS } from "../user/user";
+import { USERS } from "../../domain/repository/user";
+import { User } from "../../domain/entities/user";
 
-export function customAuth() {
+export function privateRoutes(allowedRoles: string[]) {
   return async function (ctx: ParameterizedContext, next: Next) {
-    if (ctx.path === "/graphql" && ctx.method === "POST") {
-      //const { operationName } = ctx.request.body;
-
-      return next();
-    }
-
-    const routeCalled = ROUTES.get(ctx.path);
-    if (!routeCalled) {
-      ctx.status = 404;
-      ctx.body = { message: "Route not found" };
-      return;
-    }
-
-    if (routeCalled.isPublic) {
-      return next();
-    }
-
     const token = ctx.headers.authorization?.replace("Bearer ", "");
     if (!token) {
       ctx.status = 401;
@@ -50,14 +33,7 @@ export function customAuth() {
       return;
     }
 
-    const allRolesAllowed =
-      routeCalled.allowedRoles.length === 1 &&
-      routeCalled.allowedRoles[0] === "*";
-
-    if (
-      allRolesAllowed ||
-      routeCalled.allowedRoles.includes(foundedUser.role)
-    ) {
+    if (allowedRoles.includes(foundedUser.role)) {
       ctx.state.user = foundedUser;
       return next();
     }
@@ -68,7 +44,9 @@ export function customAuth() {
   };
 }
 
-export const authMiddleware: Middleware = customAuth();
+// export const authMiddleware: Middleware = privateRoutes();
+export const authMiddleware = (allowedRoles: string[]): Middleware =>
+  privateRoutes(allowedRoles);
 
 export async function authenticateUser(request: Request): Promise<User | null> {
   const authHeader = request.headers.get("authorization");
